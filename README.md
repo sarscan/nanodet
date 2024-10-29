@@ -118,6 +118,7 @@ The pre-trained weight was trained by the config `config/nanodet-plus-m_416.yml`
 
 ```bash
 python demo/demo.py image --config CONFIG_PATH --model MODEL_PATH --path IMAGE_PATH
+python3 demo/demo.py image --config config/nanodet-plus-m_416.yml --model demo/nanodet-plus-m_416_checkpoint.ckpt --path ~/data_2T/dataset/coco/val2017/
 ```
 
 * Inference video
@@ -158,6 +159,7 @@ Besides, We provide a notebook [here](./demo/demo-inference-with-pytorch.ipynb) 
 
 ```shell script
 conda install pytorch torchvision cudatoolkit=11.1 -c pytorch -c conda-forge
+gsc: pip install torch==1.10.1+cu111 torchvision==0.11.2+cu111 torchaudio==0.10.1 -f https://download.pytorch.org/whl/cu111/torch_stable.html
 ```
 
 3. Clone this repository
@@ -248,6 +250,7 @@ NanoDet-RepVGG        | RepVGG-A0          | 416*416  |  27.8  | 11.3G | 6.75M |
 
    ```shell script
    python tools/train.py CONFIG_FILE_PATH
+   python3 tools/train.py config/nanodet-plus-m_416.yml
    ```
 
 4. **Visualize Logs**
@@ -258,7 +261,8 @@ NanoDet-RepVGG        | RepVGG-A0          | 416*416  |  27.8  | 11.3G | 6.75M |
 
     ```shell script
     cd <YOUR_SAVE_DIR>
-    tensorboard --logdir ./
+    tensorboard --logdir ./  # 默认无法执行报错null字符，应该是加密的问题，用下面的就好了
+    python3 /home/gsc/.local/bin/tensorboard --logdir ./
     ```
 
 ****
@@ -276,6 +280,8 @@ To export onnx model, run `tools/export_onnx.py`.
 
 ```shell script
 python tools/export_onnx.py --cfg_path ${CONFIG_PATH} --model_path ${PYTORCH_MODEL_PATH}
+python3 tools/export_onnx.py --cfg_path config/nanodet-plus-m_416.yml --model_path demo/nanodet-plus-m_416_checkpoint.ckpt --out_path="demo/tmp.onnx"
+gsc: --out_path has default value, --input_shape is auto fill from cfg_path
 ```
 
 ### Run NanoDet in C++ with inference libraries

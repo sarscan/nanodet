@@ -5,7 +5,7 @@
 
 #include "nanodet.h"
 #include <benchmark.h>
-// #include <iostream>
+#include <iostream>
 
 inline float fast_exp(float x)
 {
@@ -72,9 +72,13 @@ NanoDet::NanoDet(const char* param, const char* bin, bool useGPU)
     // opt
 #if NCNN_VULKAN
     this->hasGPU = ncnn::get_gpu_count() > 0;
+    std::cout << "gsc vulkan enable, hasGPU: " << this->hasGPU <<  std::endl;
+#else
+    std::cout << "gsc vulkan disable, hasGPU: " << this->hasGPU <<  std::endl;
 #endif
     this->Net->opt.use_vulkan_compute = this->hasGPU && useGPU;
     this->Net->opt.use_fp16_arithmetic = true;
+    this->Net->opt.num_threads = 8;
     this->Net->load_param(param);
     this->Net->load_model(bin);
 }
@@ -102,7 +106,7 @@ std::vector<BoxInfo> NanoDet::detect(cv::Mat image, float score_threshold, float
     ncnn::Mat input;
     preprocess(image, input);
 
-    //double start = ncnn::get_current_time();
+    double start = ncnn::get_current_time();
 
     auto ex = this->Net->create_extractor();
     ex.set_light_mode(false);
@@ -125,20 +129,39 @@ std::vector<BoxInfo> NanoDet::detect(cv::Mat image, float score_threshold, float
 
     this->decode_infer(out, center_priors, score_threshold, results);
 
+    std::vector<unsigned char> deleted;
+    double start_nms = ncnn::get_current_time();
     std::vector<BoxInfo> dets;
+    int box_num = 0;
     for (int i = 0; i < (int)results.size(); i++)
     {
-        this->nms(results[i], nms_threshold);
+        box_num += results[i].size();
+        // std::vector<unsigned char> deleted(results[i].size(), 0);
+        this->nms(results[i], deleted, nms_threshold);
 
+        // int j=0;
         for (auto box : results[i])
         {
+            // if(deleted[j] == 0){
             dets.push_back(box);
+            // }
+            // j++;
         }
     }
 
-    //double end = ncnn::get_current_time();
-    //double time = end - start;
-    //printf("Detect Time:%7.2f \n", time);
+    double end = ncnn::get_current_time();
+    double time = end - start;
+    double time_nms = end - start_nms;
+    printf("Detect Time:%7.2f ms, NMS time:%7.2f us, box_num_before_nms %d \n", time, time_nms*1000.0, box_num);
+
+    static int cnt = 0;
+    static double sum_nms = 0;
+    const int NUM = 200;
+    sum_nms += time_nms;
+    if (++cnt % NUM == 0) {
+        printf("NMS AVG time:%7.2f us\n", sum_nms*1000.0 / NUM);
+        sum_nms = 0;
+    }
 
     return dets;
 }
@@ -203,10 +226,10 @@ BoxInfo NanoDet::disPred2Bbox(const float*& dfl_det, int label, float score, int
     float ymax = (std::min)(ct_y + dis_pred[3], (float)this->input_size[1]);
 
     //std::cout << xmin << "," << ymin << "," << xmax << "," << xmax << "," << std::endl;
-    return BoxInfo { xmin, ymin, xmax, ymax, score, label };
+    return BoxInfo { xmin, ymin, xmax, ymax, score, label, true };
 }
 
-void NanoDet::nms(std::vector<BoxInfo>& input_boxes, float NMS_THRESH)
+void NanoDet::nms(std::vector<BoxInfo>& input_boxes, std::vector<unsigned char>& deleted, float NMS_THRESH)
 {
     std::sort(input_boxes.begin(), input_boxes.end(), [](BoxInfo a, BoxInfo b) { return a.score > b.score; });
     std::vector<float> vArea(input_boxes.size());
@@ -215,7 +238,9 @@ void NanoDet::nms(std::vector<BoxInfo>& input_boxes, float NMS_THRESH)
             * (input_boxes.at(i).y2 - input_boxes.at(i).y1 + 1);
     }
     for (int i = 0; i < int(input_boxes.size()); ++i) {
-        for (int j = i + 1; j < int(input_boxes.size());) {
+        // if ( deleted[i] == 1) continue;
+        for (int j = i + 1; j < int(input_boxes.size()); j++) {
+            // if ( deleted[j] == 1) continue;     // 一开始老是不对，就是这个j每次都得++,而原版是delete的方式，只有不删除的时候才++
             float xx1 = (std::max)(input_boxes[i].x1, input_boxes[j].x1);
             float yy1 = (std::max)(input_boxes[i].y1, input_boxes[j].y1);
             float xx2 = (std::min)(input_boxes[i].x2, input_boxes[j].x2);
@@ -224,6 +249,12 @@ void NanoDet::nms(std::vector<BoxInfo>& input_boxes, float NMS_THRESH)
             float h = (std::max)(float(0), yy2 - yy1 + 1);
             float inter = w * h;
             float ovr = inter / (vArea[i] + vArea[j] - inter);
+#if 1
+            if (ovr >= NMS_THRESH) {
+                // deleted[j] = 1;
+                input_boxes[j].valid = false;
+            }
+#else
             if (ovr >= NMS_THRESH) {
                 input_boxes.erase(input_boxes.begin() + j);
                 vArea.erase(vArea.begin() + j);
@@ -231,6 +262,8 @@ void NanoDet::nms(std::vector<BoxInfo>& input_boxes, float NMS_THRESH)
             else {
                 j++;
             }
+#endif
         }
+        input_boxes.erase(std::remove_if(input_boxes.begin(), input_boxes.end(), [](const BoxInfo& box){return box.valid == false;}), input_boxes.end());
     }
 }

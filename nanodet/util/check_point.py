@@ -23,8 +23,15 @@ from .rank_filter import rank_filter
 
 def load_model_weight(model, checkpoint, logger):
     state_dict = checkpoint["state_dict"].copy()
+
+    # with open('state_dict_keys.txt', 'w') as f:
+    #     for key in state_dict.keys():
+    #         f.write(f"{key}\n")
+
     for k in checkpoint["state_dict"]:
         # convert average model weights
+        # gsc 我打印了ckpt里所有的key，前一半是model.开头，后一半是avg_model开头，所以先把avg_去掉再统一去掉model.
+        # 那c++推onnx是怎么做的呢？导出onnx的时候也调用了本函数啊，然后onnx再转ncnn的格式，没问题
         if k.startswith("avg_model."):
             v = state_dict.pop(k)
             state_dict[k[4:]] = v
@@ -48,14 +55,14 @@ def load_model_weight(model, checkpoint, logger):
                         k, model_state_dict[k].shape, state_dict[k].shape
                     )
                 )
-                state_dict[k] = model_state_dict[k]
+                state_dict[k] = model_state_dict[k]	 # bad case1 就是说虽然匹配到key，但是参数的shape不一样，就还是以model已有的参数为准
         else:
-            logger.log("Drop parameter {}.".format(k))
+            logger.log("Drop parameter {}.".format(k))  # bad case2 ckpt里多了参数
     for k in model_state_dict:
         if not (k in state_dict):
             logger.log("No param {}.".format(k))
-            state_dict[k] = model_state_dict[k]
-    model.load_state_dict(state_dict, strict=False)
+            state_dict[k] = model_state_dict[k]	 # bad case3 同理，ckpt里少了参数，也是以model自己的为准
+    model.load_state_dict(state_dict, strict=False)	 # strict=false其实已经处理上述全部三个cases，上面只是为了加打印
 
 
 @rank_filter

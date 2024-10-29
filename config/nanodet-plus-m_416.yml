@@ -16,11 +16,11 @@ model:
     backbone:
       name: ShuffleNetV2
       model_size: 1.0x
-      out_stages: [2,3,4]
+      out_stages: [2,3,4]   # 只能是2 3 4的子集，控制out tensor turple，和下面fpn的in channel是对应的
       activation: LeakyReLU
     fpn:
       name: GhostPAN
-      in_channels: [116, 232, 464]
+      in_channels: [116, 232, 464]  # 这些值刚好是上面model size 1.0x对应的stage2~4的输出的channels
       out_channels: 96
       kernel_size: 5
       num_extra_level: 1
@@ -63,8 +63,8 @@ model:
 data:
   train:
     name: CocoDataset
-    img_path: coco/train2017
-    ann_path: coco/annotations/instances_train2017.json
+    img_path: /home/gsc/data_2T/dataset/coco/train2017
+    ann_path: /home/gsc/data_2T/dataset/coco/annotations/instances_train2017.json
     input_size: [416,416] #[w,h]
     keep_ratio: False
     pipeline:
@@ -81,19 +81,19 @@ data:
       normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
   val:
     name: CocoDataset
-    img_path: coco/val2017
-    ann_path: coco/annotations/instances_val2017.json
+    img_path: /home/gsc/data_2T/dataset/coco/val2017
+    ann_path: /home/gsc/data_2T/dataset/coco/annotations/instances_val2017.json
     input_size: [416,416] #[w,h]
     keep_ratio: False
     pipeline:
       normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
 device:
   gpu_ids: [0]
-  workers_per_gpu: 10
-  batchsize_per_gpu: 96
+  workers_per_gpu: 4 # 就用4吧，6昨天就电脑卡了，应该是进程数量，因为4对应top里出现了5个进程而且是不同core的（GPT说是线程数？？），反正就是慢慢调大，然后看一次迭代的时间是不是一直变小
+  batchsize_per_gpu: 30 # 先调这个 尽量大直到gpu mem用满，要留500M，这个值就是一次iterator用到的图片数，对应one update step of the model
   precision: 32 # set to 16 to use AMP training
 schedule:
-#  resume:
+  resume:
 #  load_model:
   optimizer:
     name: AdamW

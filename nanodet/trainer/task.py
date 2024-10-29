@@ -52,7 +52,7 @@ class TrainingTask(LightningModule):
             self.weight_averager = build_weight_averager(
                 cfg.model.weight_averager, device=self.device
             )
-            self.avg_model = copy.deepcopy(self.model)
+            self.avg_model = copy.deepcopy(self.model)  # gsc* 这个到底是什么，感激应该是导致load model weight那里需要去掉前缀avg_的原因
 
     def _preprocess_batch_input(self, batch):
         batch_imgs = batch["img"]
@@ -104,7 +104,7 @@ class TrainingTask(LightningModule):
                     self.global_step,
                 )
             self.logger.info(log_msg)
-
+        # loss is returned to the PyTorch Lightning trainer, which automatically handles the backpropagation of gradients and optimization of model parameters.
         return loss
 
     def training_epoch_end(self, outputs: List[Any]) -> None:
@@ -237,6 +237,9 @@ class TrainingTask(LightningModule):
         }
         return dict(optimizer=optimizer, lr_scheduler=scheduler)
 
+    # 这个函数感觉不重载也可以，就是多了lr warm up
+    # optimizer_closure: The optimizer closure. This closure must be executed as it includes the
+    #           calls to ``training_step()``, ``optimizer.zero_grad()``, and ``backward()``. 所以这里的加的zero grad其实多余
     def optimizer_step(
         self,
         epoch=None,

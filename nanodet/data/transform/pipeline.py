@@ -50,10 +50,10 @@ class Pipeline:
     """
 
     def __init__(self, cfg: Dict, keep_ratio: bool):
-        self.shape_transform = ShapeTransform(keep_ratio, **cfg)
-        self.color = functools.partial(color_aug_and_norm, kwargs=cfg)
+        self.shape_transform = ShapeTransform(keep_ratio, **cfg)    # 这个只做resize，传入keep ratio，cfg的normalize 参数没用的
+        self.color = functools.partial(color_aug_and_norm, kwargs=cfg)  # 这个只做normal，传入们mean 和std，就是写法有点怪而已
 
     def __call__(self, dataset: Dataset, meta: Dict, dst_shape: Tuple[int, int]):
-        meta = self.shape_transform(meta, dst_shape=dst_shape)
-        meta = self.color(meta=meta)
+        meta = self.shape_transform(meta, dst_shape=dst_shape)  # 传入dst的h w，resize了meta中的img
+        meta = self.color(meta=meta)    # normalize了meta中img
         return meta

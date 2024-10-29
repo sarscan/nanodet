@@ -38,13 +38,14 @@ class OneStageDetector(nn.Module):
         self.epoch = 0
 
     def forward(self, x):
-        x = self.backbone(x)
+        x = self.backbone(x)    # 这几个输入、输出是怎么级联的，backbone 输出的是一个turple啊，只要FPN里forward函数解析长度为3的turple即可
         if hasattr(self, "fpn"):
-            x = self.fpn(x)
+            x = self.fpn(x)     # gsc *fpn也全是conv norm relu这些东西，最后竟然能检测出obj，也是神奇，其实就是各种filter的组合，也合理
         if hasattr(self, "head"):
             x = self.head(x)
         return x
 
+    # 这个接口就是demo.py里调用的
     def inference(self, meta):
         with torch.no_grad():
             is_cuda_available = torch.cuda.is_available()
@@ -52,7 +53,7 @@ class OneStageDetector(nn.Module):
                 torch.cuda.synchronize()
 
             time1 = time.time()
-            preds = self(meta["img"])
+            preds = self(meta["img"])  # Module重载了运算符()，会调用上面的forward函数
 
             if is_cuda_available:
                 torch.cuda.synchronize()

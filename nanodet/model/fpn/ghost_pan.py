@@ -115,7 +115,7 @@ class GhostPAN(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
 
-        conv = DepthwiseConvModule if use_depthwise else ConvModule
+        conv = DepthwiseConvModule if use_depthwise else ConvModule # gsc* ConvModule，就是把conv norm act合一起了，后面再看吧
 
         # build top-down blocks
         self.upsample = nn.Upsample(**upsample_cfg)

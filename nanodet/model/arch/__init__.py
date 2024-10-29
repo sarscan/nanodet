@@ -36,7 +36,7 @@ def build_model(model_cfg):
             model_cfg.arch.backbone, model_cfg.arch.fpn, model_cfg.arch.head
         )
     elif name == "NanoDetPlus":
-        model = NanoDetPlus(**model_cfg.arch)
+        model = NanoDetPlus(**model_cfg.arch)   # **表示将字典arch解包成key-value，传参时会匹配形参的关键字
     else:
         raise NotImplementedError
     return model

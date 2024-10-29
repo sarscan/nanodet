@@ -19,6 +19,7 @@ import warnings
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import TQDMProgressBar
+from torch.utils.data import SequentialSampler, DataLoader
 
 from nanodet.data.collate import naive_collate
 from nanodet.data.dataset import build_dataset
@@ -73,7 +74,7 @@ def main(args):
 
     evaluator = build_evaluator(cfg.evaluator, val_dataset)
 
-    train_dataloader = torch.utils.data.DataLoader(
+    train_dataloader = DataLoader(
         train_dataset,
         batch_size=cfg.device.batchsize_per_gpu,
         shuffle=True,
@@ -82,7 +83,7 @@ def main(args):
         collate_fn=naive_collate,
         drop_last=True,
     )
-    val_dataloader = torch.utils.data.DataLoader(
+    val_dataloader = DataLoader(
         val_dataset,
         batch_size=cfg.device.batchsize_per_gpu,
         shuffle=False,
@@ -94,6 +95,7 @@ def main(args):
 
     logger.info("Creating model...")
     task = TrainingTask(cfg, evaluator)
+    # 这里调用了build_model,和推理demo.py中是一样的，相当于task.model就访问模型，evaluator也放进task里了
 
     if "load_model" in cfg.schedule:
         ckpt = torch.load(cfg.schedule.load_model)
@@ -104,8 +106,12 @@ def main(args):
             )
             ckpt = convert_old_model(ckpt)
         load_model_weight(task.model, ckpt, logger)
+        # 这里load ckpt、load model weight也是和demo.py一样的，相当于是基于人家训练好的参数继续训练，否则就是fpn、head应该是随机数开始的
         logger.info("Loaded model weight from {}".format(cfg.schedule.load_model))
 
+    # 原来恢复训练这么简单，只要把resume打开就行，草，pytorch lightning自动读取整个ckpt，上面load weight只是读取state dict
+    # 不过要注意If resuming from mid-epoch checkpoint, training will start from the beginning of the next epoch
+    # 测过了，一个epoch中断的话，下次是从头开始训练的
     model_resume_path = (
         os.path.join(cfg.save_dir, "model_last.ckpt")
         if "resume" in cfg.schedule

@@ -1,12 +1,13 @@
 Cython
 imagesize
 matplotlib
-numpy
+numpy>=1.20
 omegaconf>=2.0.1
 onnx
 onnx-simplifier
 opencv-python
 pyaml
+PyYAML>=5.4
 pycocotools
 pytorch-lightning>=1.9.0,<2.0.0
 tabulate

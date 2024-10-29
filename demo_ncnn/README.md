@@ -59,6 +59,7 @@ Set environment variables. Run:
 
 ``` shell script
 export ncnn_DIR=YOUR_NCNN_PATH/build/install/lib/cmake/ncnn
+export ncnn_DIR=/home/gsc/data_2T/code/ncnn/build-host-gcc-linux/install/lib/cmake/ncnn/
 ```
 
 Build project
@@ -87,6 +88,7 @@ Unzip the file and rename the file to `nanodet.param` and `nanodet.bin`, then co
 
 ```shell script
 ./nanodet_demo 1 ${IMAGE_FOLDER}/*.jpg
+./nanodet_demo 1 "/home/gsc/data_2T/dataset/coco/val2017/*.jpg"
 ```
 
 ## Inference video

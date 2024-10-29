@@ -35,12 +35,12 @@ def parse_args():
 
 
 class Predictor(object):
-    def __init__(self, cfg, model_path, logger, device="cuda:0"):
+    def __init__(self, cfg, model_path, logger, device="cuda:0"):   # cfg 里的是模型配置yml model里的是权重ckpt
         self.cfg = cfg
         self.device = device
-        model = build_model(cfg.model)
-        ckpt = torch.load(model_path, map_location=lambda storage, loc: storage)
-        load_model_weight(model, ckpt, logger)
+        model = build_model(cfg.model)  # 读取cfg yml里的模型配置，把backbone fpn head构建出来，其中backbone已经加载预训练的参数
+        ckpt = torch.load(model_path, map_location=lambda storage, loc: storage)	# 读取ckpt
+        load_model_weight(model, ckpt, logger)  # 加载模型权重，和backbone里加载.pth是包含关系
         if cfg.model.arch.backbone.name == "RepVGG":
             deploy_config = cfg.model
             deploy_config.arch.backbone.update({"deploy": True})
@@ -48,8 +48,8 @@ class Predictor(object):
             from nanodet.model.backbone.repvgg import repvgg_det_model_convert
 
             model = repvgg_det_model_convert(model, deploy_model)
-        self.model = model.to(device).eval()
-        self.pipeline = Pipeline(cfg.data.val.pipeline, cfg.data.val.keep_ratio)
+        self.model = model.to(device).eval()    # 就是设置为非训练模式的意思，to cuda也很容易理解
+        self.pipeline = Pipeline(cfg.data.val.pipeline, cfg.data.val.keep_ratio)    # 使用验证集的参数，验证集是用来prevent over-fitting
 
     def inference(self, img):
         img_info = {"id": 0}
@@ -62,12 +62,12 @@ class Predictor(object):
         height, width = img.shape[:2]
         img_info["height"] = height
         img_info["width"] = width
-        meta = dict(img_info=img_info, raw_img=img, img=img)
-        meta = self.pipeline(None, meta, self.cfg.data.val.input_size)
-        meta["img"] = torch.from_numpy(meta["img"].transpose(2, 0, 1)).to(self.device)
-        meta = naive_collate([meta])
-        meta["img"] = stack_batch_img(meta["img"], divisible=32)
-        with torch.no_grad():
+        meta = dict(img_info=img_info, raw_img=img, img=img)    # 就是把img info和img Mat打包在一起变成meta
+        meta = self.pipeline(None, meta, self.cfg.data.val.input_size)  # resize using h and w in val params, meta里的img变成了resize normalize后的，而raw img还是原图
+        meta["img"] = torch.from_numpy(meta["img"].transpose(2, 0, 1)).to(self.device) # 将numpy数组变成torch tensor，h w c变成c h w，并移动到GPU
+        meta = naive_collate([meta])    # 这个是组batch操作
+        meta["img"] = stack_batch_img(meta["img"], divisible=32)    # gsc* 这俩batch相关函数先不看了
+        with torch.no_grad():	# 禁用梯度计算
             results = self.model.inference(meta)
         return meta, results
 
@@ -97,9 +97,11 @@ def main():
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
 
+    # cfg 其实就是声明了一些变量，用来存放args.config里对应的参数配置，用pytorch根据这些配置打造出深度学习网络
+    # args.config只是模型中一些很少的公共参数配置，真正模型是用code打造的
     load_config(cfg, args.config)
     logger = Logger(local_rank, use_tensorboard=False)
-    predictor = Predictor(cfg, args.model, logger, device="cuda:0")
+    predictor = Predictor(cfg, args.model, logger, device="cuda:0")  # 现在cfg里就是模型配置， args.model里的是权重ckpt
     logger.log('Press "Esc", "q" or "Q" to exit.')
     current_time = time.localtime()
     if args.demo == "image":

@@ -31,6 +31,7 @@ typedef struct BoxInfo
     float y2;
     float score;
     int label;
+    bool valid;
 } BoxInfo;
 
 class NanoDet
@@ -64,7 +65,7 @@ private:
     void preprocess(cv::Mat& image, ncnn::Mat& in);
     void decode_infer(ncnn::Mat& feats, std::vector<CenterPrior>& center_priors, float threshold, std::vector<std::vector<BoxInfo>>& results);
     BoxInfo disPred2Bbox(const float*& dfl_det, int label, float score, int x, int y, int stride);
-    static void nms(std::vector<BoxInfo>& result, float nms_threshold);
+    static void nms(std::vector<BoxInfo>& result, std::vector<unsigned char>& deleted, float nms_threshold);
 
 };
 

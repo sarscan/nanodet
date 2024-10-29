@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import copy
-
+# 这些.xxx表示当前目录的py文件，还可以是..
 from .custom_csp import CustomCspNet
 from .efficientnet_lite import EfficientNetLite
 from .ghostnet import GhostNet
@@ -23,7 +23,7 @@ from .resnet import ResNet
 from .shufflenetv2 import ShuffleNetV2
 from .timm_wrapper import TIMMWrapper
 
-
+# 这个其实就是简单工厂
 def build_backbone(cfg):
     backbone_cfg = copy.deepcopy(cfg)
     name = backbone_cfg.pop("name")

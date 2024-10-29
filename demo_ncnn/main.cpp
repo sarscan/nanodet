@@ -13,6 +13,7 @@ struct object_rect {
     int height;
 };
 
+// 这个其实就是keep ratio resize ，padding的值就是0
 int resize_uniform(cv::Mat& src, cv::Mat& dst, cv::Size dst_size, object_rect& effect_area)
 {
     int w = src.cols;
@@ -244,7 +245,7 @@ int image_demo(NanoDet &detector, const char* imagepath)
         resize_uniform(image, resized_img, cv::Size(width, height), effect_roi);
         auto results = detector.detect(resized_img, 0.4, 0.5);
         draw_bboxes(image, results, effect_roi);
-        cv::waitKey(0);
+        // cv::waitKey(0);
 
     }
     return 0;
@@ -332,7 +333,7 @@ int main(int argc, char** argv)
         fprintf(stderr, "usage: %s [mode] [path]. \n For webcam mode=0, path is cam id; \n For image demo, mode=1, path=xxx/xxx/*.jpg; \n For video, mode=2; \n For benchmark, mode=3 path=0.\n", argv[0]);
         return -1;
     }
-    NanoDet detector = NanoDet("./nanodet.param", "./nanodet.bin", true);
+    NanoDet detector = NanoDet("../model/nanodet-plus-m_416.param", "../model/nanodet-plus-m_416.bin", true);
     int mode = atoi(argv[1]);
     switch (mode)
     {

@@ -1,5 +1,5 @@
 from .yacs import CfgNode
-
+# 这个new allowed 很好理解，就是这里有些默认的配置，而配置文件里还有更多的配置，就是允许合并配置文件里的新配置
 cfg = CfgNode(new_allowed=True)
 cfg.save_dir = "./"
 # common params for NETWORK
